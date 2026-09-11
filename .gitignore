@@ -1,0 +1,6 @@
+.venv/
+.env
+.demo_key
+__pycache__/
+*.pyc
+.fabric_token

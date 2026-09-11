@@ -1,0 +1,71 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+
+  :focus-visible {
+    outline: 2px solid theme("colors.signal.DEFAULT");
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  ::selection {
+    background: theme("colors.signal.edge");
+    color: theme("colors.sheet.ink");
+  }
+}
+
+@layer utilities {
+  /* Scrollbars styled per environment so the dark rail keeps its own. */
+  .scroll-sheet {
+    scrollbar-width: thin;
+    scrollbar-color: #c3ccd2 transparent;
+  }
+  .scroll-sheet::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .scroll-sheet::-webkit-scrollbar-thumb {
+    background: #c8d0d5;
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 99px;
+  }
+  .scroll-sheet::-webkit-scrollbar-thumb:hover {
+    background: #a9b5bd;
+    background-clip: content-box;
+  }
+
+  .scroll-shell {
+    scrollbar-width: thin;
+    scrollbar-color: #2c4c5e transparent;
+  }
+  .scroll-shell::-webkit-scrollbar {
+    width: 10px;
+  }
+  .scroll-shell::-webkit-scrollbar-thumb {
+    background: #294555;
+    border: 3px solid transparent;
+    background-clip: content-box;
+    border-radius: 99px;
+  }
+
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

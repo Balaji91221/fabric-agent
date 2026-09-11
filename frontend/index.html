@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Semantic model console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDEFF1; --panel:#FFFFFF; --ink:#16202B; --muted:#5D6E7C;
+  --rule:#D2D9DF; --accent:#0B6E75; --accent-soft:#E4F0F0; --flag:#8A5A00;
+  --radius:3px;
+  --sans:"IBM Plex Sans",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --serif:"Newsreader",Georgia,serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.shell{display:grid;grid-template-columns:296px 1fr;height:100vh}
+
+/* ---------- model explorer ---------- */
+.rail{
+  background:var(--panel); border-right:1px solid var(--rule);
+  display:flex; flex-direction:column; min-height:0;
+}
+.rail-head{padding:22px 20px 16px;border-bottom:1px solid var(--rule)}
+.model-name{font-family:var(--serif);font-size:24px;line-height:1.15;margin:0 0 6px;font-weight:400}
+.model-sub{font-size:12.5px;color:var(--muted);margin:0}
+.rail-body{overflow-y:auto;padding:6px 0 24px;flex:1;min-height:0}
+.group{padding:16px 20px 4px}
+.group h2{
+  font-size:12.5px;font-weight:600;color:var(--muted);margin:0 0 8px;letter-spacing:.01em;
+}
+.group h2 span{font-weight:400;color:var(--rule);margin-left:4px}
+.node{
+  display:block;width:100%;text-align:left;background:none;border:0;
+  padding:5px 20px;font-size:13.5px;border-left:2px solid transparent;
+}
+.node:hover{background:var(--accent-soft);border-left-color:var(--accent)}
+.node .cols{display:block;font-family:var(--mono);font-size:11.5px;color:var(--muted);margin-top:2px}
+.node .expr{
+  display:none;font-family:var(--mono);font-size:11.5px;color:var(--flag);
+  margin-top:3px;white-space:pre-wrap;word-break:break-word;
+}
+.node[aria-expanded="true"] .expr{display:block}
+.measure{color:var(--accent);font-weight:500}
+
+/* ---------- main ---------- */
+.main{display:flex;flex-direction:column;min-width:0;min-height:0}
+.status{
+  display:flex;gap:24px;align-items:baseline;flex-wrap:wrap;
+  padding:12px 32px;border-bottom:1px solid var(--rule);
+  background:var(--panel);font-size:12.5px;color:var(--muted);
+}
+.status b{font-weight:500;color:var(--ink)}
+.status .key{font-family:var(--mono);font-size:11.5px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block;margin-right:6px;vertical-align:1px}
+.dot.warn{background:var(--flag)}
+
+.transcript{flex:1;overflow-y:auto;padding:32px 32px 8px;min-height:0}
+.stack{max-width:74ch;margin:0 auto;display:flex;flex-direction:column;gap:30px}
+
+.opening{max-width:62ch}
+.opening h1{font-family:var(--serif);font-weight:400;font-size:29px;line-height:1.25;margin:0 0 10px}
+.opening p{color:var(--muted);margin:0 0 20px}
+.seeds{display:flex;flex-direction:column;gap:1px;background:var(--rule);border:1px solid var(--rule);border-radius:var(--radius)}
+.seed{background:var(--panel);border:0;padding:11px 14px;text-align:left;font-size:14px}
+.seed:hover{background:var(--accent-soft)}
+
+.turn-you{
+  font-size:16px;padding-left:14px;border-left:2px solid var(--ink);
+}
+.turn-agent{display:flex;flex-direction:column;gap:14px}
+
+.trace{font-size:12.5px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.trace .pending::after{content:"";animation:dots 1.2s steps(4,end) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+
+.query{
+  background:var(--panel);border:1px solid var(--rule);border-left:2px solid var(--accent);
+  border-radius:var(--radius);overflow:hidden;
+}
+.query header{
+  display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:8px 12px;border-bottom:1px solid var(--rule);font-size:12.5px;color:var(--muted);
+}
+.query header button{background:none;border:1px solid var(--rule);border-radius:var(--radius);padding:2px 8px;font-size:12px;color:var(--muted)}
+.query header button:hover{border-color:var(--accent);color:var(--accent)}
+.query pre{
+  margin:0;padding:12px;font-family:var(--mono);font-size:12.5px;line-height:1.6;
+  overflow-x:auto;white-space:pre;
+}
+.k{color:var(--accent);font-weight:500}
+.s{color:var(--flag)}
+.n{color:#7A2E6B}
+
+.grid{border:1px solid var(--rule);border-radius:var(--radius);overflow:auto;background:var(--panel);max-height:340px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:7px 12px;text-align:left;border-bottom:1px solid var(--rule);white-space:nowrap}
+th{position:sticky;top:0;background:var(--panel);font-weight:600;font-size:12.5px;color:var(--muted);z-index:1}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+tr:last-child td{border-bottom:0}
+.grid-note{padding:6px 12px;font-size:12px;color:var(--muted);border-top:1px solid var(--rule)}
+
+.answer{font-family:var(--serif);font-size:17px;line-height:1.6}
+.answer p{margin:0 0 .7em}
+.answer ul{margin:0 0 .7em;padding-left:1.1em}
+.answer li{margin-bottom:.25em}
+.answer strong{font-weight:500;color:var(--accent)}
+.answer code{font-family:var(--mono);font-size:14px;background:var(--accent-soft);padding:1px 4px;border-radius:2px}
+
+.fail{border-left:2px solid var(--flag);padding-left:14px;color:var(--flag);font-size:14px}
+
+/* ---------- composer ---------- */
+.composer{border-top:1px solid var(--rule);background:var(--panel);padding:14px 32px 20px}
+.composer-inner{max-width:74ch;margin:0 auto;display:flex;gap:10px;align-items:flex-end}
+textarea{
+  flex:1;resize:none;font:inherit;color:inherit;padding:10px 12px;
+  border:1px solid var(--rule);border-radius:var(--radius);background:var(--paper);
+  min-height:44px;max-height:160px;
+}
+textarea:focus{outline:none;border-color:var(--accent);background:var(--panel)}
+.send{
+  background:var(--accent);color:#fff;border:0;border-radius:var(--radius);
+  padding:11px 20px;font-weight:500;
+}
+.send:disabled{background:var(--rule);color:var(--muted);cursor:not-allowed}
+.working{height:1px;background:var(--rule);margin:0 32px;position:relative;overflow:hidden}
+.working.on::after{
+  content:"";position:absolute;inset:0;width:35%;background:var(--accent);
+  animation:sweep 1.1s ease-in-out infinite;
+}
+@keyframes sweep{0%{left:-35%}100%{left:100%}}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  .rail{border-right:0;border-bottom:1px solid var(--rule);max-height:34vh}
+  .transcript,.composer,.status{padding-left:18px;padding-right:18px}
+  .working{margin:0 18px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="rail">
+    <div class="rail-head">
+      <h1 class="model-name" id="modelName">Loading model…</h1>
+      <p class="model-sub" id="modelSub">Reading tables and measures</p>
+    </div>
+    <div class="rail-body" id="rail"></div>
+  </aside>
+
+  <main class="main">
+    <div class="status">
+      <span><span class="dot" id="modeDot"></span><b id="modeLabel">connecting</b></span>
+      <span>agent <b id="agentId">—</b></span>
+      <span>reasoning <b id="reasonId">—</b></span>
+      <span>key <b class="key" id="keyLabel">—</b></span>
+    </div>
+
+    <div class="transcript" id="transcript">
+      <div class="stack" id="stack">
+        <section class="opening" id="opening">
+          <h1>Ask the model a question and see the DAX it ran.</h1>
+          <p>Every answer below carries the query that produced it, so you can check the logic before you trust the number.</p>
+          <div class="seeds" id="seeds"></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="working" id="working"></div>
+    <div class="composer">
+      <div class="composer-inner">
+        <textarea id="input" rows="1" placeholder="Which category had the highest margin last year?" aria-label="Ask about the semantic model"></textarea>
+        <button class="send" id="send">Ask</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const API = location.origin;
+let KEY = null, MODEL = "fabric-semantic-agent";
+const history = [];
+
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    ...opts,
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + KEY, ...(opts.headers || {}) }
+  });
+  if (!res.ok) throw new Error((await res.text()).slice(0, 300));
+  return res;
+}
+
+/* ---------- boot ---------- */
+async function boot() {
+  try {
+    const demo = await (await fetch(API + "/demo/key")).json();
+    KEY = demo.api_key; MODEL = demo.model;
+    $("keyLabel").textContent = KEY.slice(0, 20) + "…";
+  } catch {
+    KEY = prompt("API key for this agent:") || "";
+    $("keyLabel").textContent = "supplied by you";
+  }
+
+  try {
+    const info = await (await api("/v1/agent/info")).json();
+    $("agentId").textContent = info.id;
+    $("reasonId").textContent = info.reasoning_model;
+    $("modeLabel").textContent = info.mode === "live" ? "connected to Fabric" : "demo model, no Fabric credentials";
+    if (info.mode !== "live") $("modeDot").classList.add("warn");
+  } catch (e) { $("modeLabel").textContent = "backend unreachable"; }
+
+  try { renderRail(await (await api("/v1/agent/schema")).json()); }
+  catch { $("modelSub").textContent = "Schema unavailable"; }
+}
+
+function renderRail(schema) {
+  $("modelName").textContent = schema.name || "Semantic model";
+  $("modelSub").textContent = `${schema.tables.length} tables · ${schema.measures.length} measures · read-only`;
+  const rail = $("rail"); rail.innerHTML = "";
+
+  const tg = el("div", "group");
+  tg.append(Object.assign(el("h2", null, "Tables"), {}));
+  rail.append(tg);
+  schema.tables.forEach(t => {
+    const b = el("button", "node");
+    b.append(el("span", null, t.name));
+    b.append(el("span", "cols", t.columns.map(c => c.name).join(" · ")));
+    b.onclick = () => ask(`What is in the ${t.name} table?`);
+    rail.append(b);
+  });
+
+  const mg = el("div", "group");
+  mg.append(el("h2", null, "Measures"));
+  rail.append(mg);
+  schema.measures.forEach(m => {
+    const b = el("button", "node");
+    b.setAttribute("aria-expanded", "false");
+    b.append(el("span", "measure", m.name));
+    b.append(el("span", "expr", m.expression));
+    b.onclick = () => b.setAttribute("aria-expanded", b.getAttribute("aria-expanded") === "true" ? "false" : "true");
+    rail.append(b);
+  });
+
+  const seeds = [
+    "Total sales by category, biggest first",
+    "Top 5 countries by margin in 2024",
+    "How did sales grow year over year?",
+    "Which channel sells the most units?"
+  ];
+  const box = $("seeds");
+  seeds.forEach(s => { const b = el("button", "seed", s); b.onclick = () => ask(s); box.append(b); });
+}
+
+/* ---------- rendering ---------- */
+const DAX_KEYWORDS = /\b(EVALUATE|DEFINE|SUMMARIZECOLUMNS|CALCULATE|CALCULATETABLE|FILTER|ALL|ALLSELECTED|VALUES|TOPN|ORDER BY|ROW|ADDCOLUMNS|SELECTCOLUMNS|TREATAS|DIVIDE|SUM|SUMX|COUNTROWS|AVERAGE|MAX|MIN|VAR|RETURN|ASC|DESC|MEASURE|DISTINCT|RELATED|SAMEPERIODLASTYEAR|DATESYTD)\b/g;
+
+function highlight(dax) {
+  return dax
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/"([^"]*)"/g, '<span class="s">"$1"</span>')
+    .replace(DAX_KEYWORDS, '<span class="k">$&</span>')
+    .replace(/\b(\d[\d.]*)\b/g, '<span class="n">$1</span>');
+}
+
+function queryBlock(dax, purpose) {
+  const wrap = el("div", "query");
+  const head = el("header");
+  head.append(el("span", null, purpose || "DAX sent to the semantic model"));
+  const copy = el("button", null, "Copy");
+  copy.onclick = () => { navigator.clipboard.writeText(dax); copy.textContent = "Copied"; setTimeout(() => copy.textContent = "Copy", 1400); };
+  head.append(copy);
+  const pre = el("pre"); pre.innerHTML = highlight(dax);
+  wrap.append(head, pre);
+  return wrap;
+}
+
+function resultGrid(payload) {
+  const rows = payload.rows || [], cols = payload.columns || [];
+  const wrap = el("div", "grid");
+  if (!rows.length) { wrap.append(el("div", "grid-note", "The query returned no rows.")); return wrap; }
+  const table = el("table"), thead = el("thead"), hr = el("tr");
+  const numeric = c => rows.some(r => typeof r[c] === "number");
+  cols.forEach(c => { const th = el("th", numeric(c) ? "num" : null, c); hr.append(th); });
+  thead.append(hr); table.append(thead);
+  const tb = el("tbody");
+  rows.forEach(r => {
+    const tr = el("tr");
+    cols.forEach(c => {
+      const v = r[c], isNum = typeof v === "number";
+      tr.append(el("td", isNum ? "num" : null, isNum ? formatNumber(c, v) : String(v ?? "")));
+    });
+    tb.append(tr);
+  });
+  table.append(tb); wrap.append(table);
+  if (payload.truncated) wrap.append(el("div", "grid-note", `Showing ${rows.length} of ${payload.rowCount} rows.`));
+  return wrap;
+}
+
+function formatNumber(col, v) {
+  const c = col.toLowerCase();
+  if (c.includes("%")) return (v * 100).toFixed(1) + "%";
+  if (/sales|cost|margin|amount|revenue|price/.test(c)) return "$" + v.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  return v.toLocaleString();
+}
+
+function markdown(md) {
+  const lines = md.split("\n");
+  let html = "", list = false;
+  const inline = t => t
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*(.+?)\*/g, "<em>$1</em>")
+    .replace(/`(.+?)`/g, "<code>$1</code>");
+  for (const line of lines) {
+    if (/^\s*[-*]\s+/.test(line)) {
+      if (!list) { html += "<ul>"; list = true; }
+      html += "<li>" + inline(line.replace(/^\s*[-*]\s+/, "")) + "</li>";
+    } else {
+      if (list) { html += "</ul>"; list = false; }
+      if (line.trim()) html += "<p>" + inline(line) + "</p>";
+    }
+  }
+  if (list) html += "</ul>";
+  return html;
+}
+
+/* ---------- conversation ---------- */
+async function ask(text) {
+  if (!text.trim()) return;
+  $("opening")?.remove();
+  $("input").value = "";
+  setBusy(true);
+
+  const stack = $("stack");
+  stack.append(el("div", "turn-you", text));
+  const turn = el("div", "turn-agent");
+  const trace = el("div", "trace");
+  const pending = el("div", "pending", "Planning the query");
+  trace.append(pending);
+  turn.append(trace);
+  const answer = el("div", "answer");
+  stack.append(turn);
+  scroll();
+
+  history.push({ role: "user", content: text });
+  let full = "";
+
+  try {
+    const res = await api("/v1/chat/completions", {
+      method: "POST",
+      body: JSON.stringify({ model: MODEL, messages: history, stream: true })
+    });
+
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    let buf = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      const frames = buf.split("\n\n"); buf = frames.pop();
+      for (const frame of frames) {
+        const dataLine = frame.split("\n").find(l => l.startsWith("data:"));
+        if (!dataLine) continue;
+        const data = dataLine.slice(5).trim();
+        if (!data || data === "[DONE]") continue;
+        const parsed = JSON.parse(data);
+
+        const step = parsed.fabric_agent;
+        if (step) {
+          pending.remove();
+          if (step.tool === "dax") {
+            if (step.error) turn.append(el("div", "fail", step.error));
+            else { turn.append(queryBlock(step.dax, step.purpose)); turn.append(resultGrid(step)); }
+          } else if (step.name) {
+            trace.append(el("div", null, step.name === "run_dax_query" ? "Writing DAX" : "Reading the model schema"));
+          }
+          scroll();
+          continue;
+        }
+
+        const delta = parsed.choices?.[0]?.delta?.content;
+        if (delta) {
+          pending.remove();
+          full += delta;
+          if (!answer.isConnected) turn.append(answer);
+          answer.innerHTML = markdown(full);
+          scroll();
+        }
+      }
+    }
+    if (full.trim()) history.push({ role: "assistant", content: full });
+    else { pending.remove(); turn.append(el("div", "fail", "The agent returned no answer. Try rephrasing the question.")); }
+  } catch (err) {
+    pending.remove();
+    turn.append(el("div", "fail", "Request failed: " + err.message));
+  } finally {
+    setBusy(false);
+  }
+}
+
+function setBusy(on) {
+  $("send").disabled = on;
+  $("send").textContent = on ? "Asking" : "Ask";
+  $("working").classList.toggle("on", on);
+}
+function scroll() { const t = $("transcript"); t.scrollTop = t.scrollHeight; }
+
+$("send").onclick = () => ask($("input").value);
+$("input").addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask($("input").value); }
+});
+$("input").addEventListener("input", e => {
+  e.target.style.height = "auto";
+  e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px";
+});
+
+boot();
+</script>
+</body>
+</html>
