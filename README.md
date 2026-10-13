@@ -2,6 +2,14 @@
 
 An agent that answers questions about **one Microsoft Fabric semantic model** by writing DAX, running it, and explaining the result. It is exposed as an **OpenAI-compatible API**, so any OpenAI client can talk to it by changing `base_url` — the agent is the model.
 
+[Quick start](#run-it) · [Client example](#use-it-as-an-openai-model) · [Architecture](#architecture) · [Configuration](#connect-a-real-semantic-model)
+
+## Why this exists
+
+A business question should lead to an inspectable query and result, not just an answer with unexplained numbers. This project puts schema discovery, DAX execution, and the explanation in one workflow. It is useful for engineers prototyping conversational access to a semantic model and analysts evaluating the evidence behind an answer.
+
+## Architecture
+
 ```
 frontend-next/   Next.js console (App Router, TypeScript, Tailwind)
       │  POST /api/chat  ── key attached server-side, never in the browser
@@ -13,6 +21,8 @@ Microsoft Fabric POST /datasets/{id}/executeQueries    (read-only DAX)
 ```
 
 ## Run it
+
+Use Python 3.10+ and Node.js with npm for the console. The Bash scripts create a Python virtual environment and install the declared dependencies.
 
 ```bash
 cp .env.example .env                  # optional — it runs without one
