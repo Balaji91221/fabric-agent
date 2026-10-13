@@ -158,3 +158,7 @@ cd frontend-next && npm run build   # types + production build
 ```
 
 The smoke test covers auth rejection, model listing, schema discovery, the read-only guard, direct DAX, and both completion modes.
+
+---
+
+Explore more of my work: [latest open-source tools](https://github.com/Balaji91221#latest-open-source-tools) · [recent projects](https://github.com/Balaji91221#recent-work).
